@@ -46,7 +46,7 @@ logs are rotated so they can't fill the disk.
 ## 2. Get the code
 
 ```bash
-git clone https://github.com/<your-username>/notifyhub.git
+git clone https://github.com/imanali2237/notifyhub.git
 cd notifyhub
 ```
 

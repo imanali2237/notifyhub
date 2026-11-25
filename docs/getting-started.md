@@ -14,7 +14,7 @@ Deploying to a server? See [Self-hosting in production](self-hosting.md).
 ## 2. Install
 
 ```bash
-git clone https://github.com/<your-username>/notifyhub.git
+git clone https://github.com/imanali2237/notifyhub.git
 cd notifyhub
 npm install
 ```
