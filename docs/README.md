@@ -34,6 +34,7 @@ your own server; your apps send notifications through its API.
 | Reliability | Queue per channel, retries with exponential backoff, dead-letter queue, idempotency keys |
 | Tracking | `GET /v1/notifications/:id` with full status history |
 | Tools | Swagger docs (`/docs`), queue dashboard (`/queues`), Mailpit (`:8025`) |
+| Quality | ✅ CI on every pull request: lint, formatting, typecheck, unit + e2e tests, production Docker stack ([`.github/workflows/ci.yml`](../.github/workflows/ci.yml)) |
 | Deployment | ✅ Production Docker image + compose file, automatic migrations, optional HTTPS (Caddy), backups |
 | SMS, Telegram, push, `<Inbox />` React component, SDK, dashboard | Planned |
 
@@ -48,3 +49,4 @@ pull request:**
 - new or changed endpoint → [sending-notifications.md](sending-notifications.md)
 - new channel → a new `docs/<channel>.md` page, linked from this index
 - anything moving from "planned" to "works" → the table above
+- security-relevant change (auth, tokens, what's stored, defaults) → [SECURITY.md](../SECURITY.md)'s list of built-in measures

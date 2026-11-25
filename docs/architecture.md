@@ -557,9 +557,11 @@ Free-tier limits of third-party providers (Brevo, textbee, ...) change over time
 - [ ] Prometheus metrics (queue depth, latency, success rate) + Grafana dashboard
 - [ ] Structured logging with Pino and correlation IDs
 - [ ] k6 load test, publish results in README
-- [ ] GitHub Actions CI (lint, test, build, publish Docker image)
+- [x] GitHub Actions CI (lint, typecheck, unit + e2e tests, build, production Docker stack smoke test)
+- [ ] Publish the Docker image to a registry on release
 - [x] Production `docker compose` file + self-hosting guide (env reference, upgrades, backups)
-- [ ] Open-source essentials: LICENSE (e.g. MIT), CONTRIBUTING.md, issue templates
+- [x] LICENSE (MIT), SECURITY.md (private vulnerability reporting)
+- [ ] CONTRIBUTING.md, issue templates
 - [ ] README with architecture diagram, design decisions, 2-minute demo video
 
 ---
