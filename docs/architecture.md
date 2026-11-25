@@ -39,7 +39,7 @@ NotifyHub then:
 - **One installation = one organization.** The operator puts their own provider credentials (SMTP server, Brevo API key, ...) in `.env`. Nothing is stored per customer, so no credential encryption or per-tenant provider setup is needed.
 - **Operator-controlled access.** The first account created is the admin. `SIGNUP_ENABLED` (default `false`) decides whether more accounts can be created; `EMAIL_VERIFICATION_REQUIRED` decides whether they need an emailed OTP.
 - **Everything configurable via `.env`,** with sensible defaults in code, validated at startup.
-- **SDK on npm** (`@notifyhub/node`) points at the operator's own NotifyHub URL.
+- **SDKs on npm** (`notifyhub` for Node, `notifyhub-react` for the inbox UI) points at the operator's own NotifyHub URL.
 
 ---
 
@@ -140,7 +140,7 @@ sequenceDiagram
 | **WebSocket Gateway** | Pushes in-app notifications in real time; Redis adapter so it scales across instances |
 | **Webhook Dispatcher** (planned) | Sends signed (HMAC-SHA256) status events back to client apps, with its own retries |
 | **Dashboard** | Next.js app served by the operator's own installation: templates with live preview, API keys, workflows, logs explorer, stats |
-| **SDK + Inbox widget** | `@notifyhub/node` (typed client) and `@notifyhub/react` (`<Inbox />` bell component) |
+| **SDK + Inbox widget** | `notifyhub` (typed Node client) and `notifyhub-react` (`<Inbox />` bell component) |
 
 ---
 
@@ -156,8 +156,8 @@ notifyhub/
 │   ├── core/                 # Shared domain types, DTOs, enums
 │   ├── providers/            # Provider interfaces + adapters (email, in-app)
 │   ├── templates/            # Handlebars/MJML rendering
-│   ├── sdk-node/             # @notifyhub/node
-│   └── inbox-react/          # @notifyhub/react <Inbox />
+│   ├── sdk-node/             # notifyhub (npm)
+│   └── inbox-react/          # notifyhub-react <Inbox />
 ├── examples/
 │   └── demo-shop/            # Tiny e-commerce app that uses the SDK (your live demo)
 ├── docker/
@@ -496,7 +496,7 @@ Free-tier limits of third-party providers (Brevo, Gmail, ...) change over time, 
 ### Phase 4 — In-app and real-time (Week 7)
 - [x] Socket.IO gateway with Redis adapter, subscriber auth via short-lived subscriber tokens
 - [x] Inbox API: list, unread count, mark read / mark all read
-- [ ] `@notifyhub/react` `<Inbox />` component
+- [ ] `notifyhub-react` `<Inbox />` component
 
 ### Phase 5 — Smart features (Weeks 8–9)
 - [ ] Workflow steps: channel, delay, digest
@@ -510,7 +510,7 @@ Free-tier limits of third-party providers (Brevo, Gmail, ...) change over time, 
 - [ ] Template editor with live preview (Handlebars + MJML)
 - [ ] Logs explorer with filters (status, channel, subscriber, date)
 - [ ] Stats: sent / failed / delivery rate per channel
-- [ ] Publish `@notifyhub/node` to npm
+- [ ] Publish `notifyhub` (Node SDK) to npm
 - [ ] `examples/demo-shop` using the SDK end to end
 
 ### Phase 7 — Production polish (Week 12)

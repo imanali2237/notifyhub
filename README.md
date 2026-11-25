@@ -5,7 +5,7 @@
 > NotifyHub handles providers, templates, queuing, retries, failover and
 > delivery logs.
 
-[![CI](https://github.com/imanali2237/notifyhub-backend/actions/workflows/ci.yml/badge.svg)](https://github.com/imanali2237/notifyhub-backend/actions/workflows/ci.yml)
+[![CI](https://github.com/imanali2237/notifyhub/actions/workflows/ci.yml/badge.svg)](https://github.com/imanali2237/notifyhub/actions/workflows/ci.yml)
 ![Status](https://img.shields.io/badge/status-in%20development-orange)
 ![NestJS](https://img.shields.io/badge/NestJS-E0234E?logo=nestjs&logoColor=white)
 ![Prisma](https://img.shields.io/badge/Prisma-2D3748?logo=prisma&logoColor=white)
@@ -64,7 +64,7 @@ curl -X POST http://localhost:3000/v1/email/send \
 
 **Channels:** NotifyHub focuses on **email** and **in-app** only. SMS, push and chat apps are out of scope.
 
-**Planned** (see the [roadmap](docs/architecture.md#11-roadmap)): `<Inbox />` React component, subscribers and preferences, workflows, outbound webhooks, dashboard, `@notifyhub/node` SDK.
+**Planned** (see the [roadmap](docs/architecture.md#11-roadmap)): `<Inbox />` React component, subscribers and preferences, workflows, outbound webhooks, dashboard, Node SDK (`notifyhub`) and React package (`notifyhub-react`).
 
 ---
 
@@ -73,7 +73,7 @@ curl -X POST http://localhost:3000/v1/email/send \
 Requirements: Node.js 20.19+ / 22.12+ / 24+, Docker.
 
 ```bash
-git clone https://github.com/<your-username>/notifyhub.git
+git clone https://github.com/imanali2237/notifyhub.git
 cd notifyhub
 npm install
 cp .env.example .env        # then set OTP_SECRET and JWT_SECRET (openssl rand -hex 32)
@@ -95,7 +95,7 @@ create your account and API key and send your first email.
 Requirements: a Linux server with Docker. No Node.js needed.
 
 ```bash
-git clone https://github.com/<your-username>/notifyhub.git && cd notifyhub
+git clone https://github.com/imanali2237/notifyhub.git && cd notifyhub
 cp .env.production.example .env.production      # set passwords, secrets, email
 docker compose -f docker/docker-compose.prod.yml --env-file .env.production up -d --build
 ```
@@ -192,7 +192,7 @@ and requests are still accepted while workers are down.
 - [x] **Channels and providers:** provider registry, SMTP + Brevo with failover, in-app inbox (email and in-app are the only channels)
 - [ ] **In-app and real-time:** ~~Socket.IO gateway~~ ✅, ~~inbox API~~ ✅, `<Inbox />` React component
 - [ ] **Smart features:** subscribers, workflows, delays, digests, preferences, quiet hours, rate limiting, outbound webhooks
-- [ ] **Dashboard and SDK:** Next.js dashboard, template editor, logs explorer, `@notifyhub/node` on npm, demo app
+- [ ] **Dashboard and SDK:** Next.js dashboard, template editor, logs explorer, `notifyhub` (Node SDK) and `notifyhub-react` on npm, demo app
 - [ ] **Production polish:** ~~production Docker Compose + self-hosting guide~~ ✅, ~~load tests~~ ✅, ~~CI~~ ✅, OpenTelemetry, metrics, structured logging, rate limiting
 
 ---
