@@ -1,8 +1,11 @@
 # NotifyHub — Plug-and-Play Notification Platform
 
 > An open-source, self-hosted notification platform. Run it on your own server with one
-> command; your apps integrate with one API call or SDK, and NotifyHub handles channels,
-> templates, preferences, queuing, retries and delivery logs.
+> command; your apps integrate with one API call or SDK, and NotifyHub delivers **email** and
+> **in-app** notifications, with templates, preferences, queuing, retries and delivery logs.
+>
+> **Channels: email and in-app only.** NotifyHub deliberately supports just these two and does
+> them well. SMS, push, chat apps and other channels are out of scope.
 >
 > **Budget: $0.** Every tool in this document is free and open source or has a free tier.
 
@@ -23,17 +26,17 @@ NotifyHub then:
 
 1. Authenticates the tenant by API key
 2. Loads the `order-shipped` workflow (which channels, in what order, with what delays)
-3. Checks the subscriber's preferences (opted out of SMS? quiet hours?)
-4. Renders templates per channel (email HTML, SMS text, push title/body, in-app message)
+3. Checks the subscriber's preferences (opted out of marketing email? quiet hours?)
+4. Renders templates per channel (email subject/HTML/text, in-app title/body/link)
 5. Pushes jobs to channel queues
-6. Workers send through the providers the operator configured in `.env` (Gmail SMTP, Brevo, FCM, Telegram...)
-7. Retries on failure, falls back to another channel if configured, logs every status change
+6. Workers send through the providers the operator configured in `.env` (Gmail SMTP, Brevo, any SMTP server; the built-in inbox for in-app)
+7. Retries on failure, fails over to the next email provider, logs every status change
 8. Fires outbound webhooks to the client app (`delivered`, `failed`, `read`)
 
 ### How it is distributed
 
 - **Open source, self-hosted.** Whoever runs NotifyHub (the *operator*) clones the repo or uses the Docker image and runs it on their own infrastructure. There is no hosted/SaaS version and no billing.
-- **One installation = one organization.** The operator puts their own provider credentials (SMTP, Telegram bot token, ...) in `.env`. Nothing is stored per customer, so no credential encryption or per-tenant provider setup is needed.
+- **One installation = one organization.** The operator puts their own provider credentials (SMTP server, Brevo API key, ...) in `.env`. Nothing is stored per customer, so no credential encryption or per-tenant provider setup is needed.
 - **Operator-controlled access.** The first account created is the admin. `SIGNUP_ENABLED` (default `false`) decides whether more accounts can be created; `EMAIL_VERIFICATION_REQUIRED` decides whether they need an emailed OTP.
 - **Everything configurable via `.env`,** with sensible defaults in code, validated at startup.
 - **SDK on npm** (`@notifyhub/node`) points at the operator's own NotifyHub URL.
@@ -55,11 +58,9 @@ flowchart LR
         Q[(Redis<br/>BullMQ Queues)]
         subgraph Workers["Channel Workers"]
             W1[Email Worker]
-            W2[SMS Worker]
-            W3[Push Worker]
-            W4[Chat Worker<br/>Telegram / Discord / Slack]
-            W5[Webhook Worker]
+            W2[In-app Worker]
         end
+        WH[Webhook Dispatcher<br/>status events]
         WS[WebSocket Gateway<br/>Socket.IO]
         PG[(PostgreSQL<br/>config data)]
         MG[(MongoDB<br/>logs & in-app feed)]
@@ -67,30 +68,25 @@ flowchart LR
     end
 
     subgraph Providers["Provider Adapters"]
-        P1[Gmail SMTP / Brevo / Mailpit]
-        P2[textbee / Console SMS / Twilio*]
-        P3[FCM / Web Push]
-        P4[Telegram / Discord / Slack]
+        P1[Gmail SMTP / Brevo / Mailpit / any SMTP]
+        P2[Inbox<br/>MongoDB + WebSocket]
     end
 
     A1 -->|API key| API
     A2 <-->|real-time| WS
     API --> WF
     WF --> Q
-    Q --> W1 & W2 & W3 & W4 & W5
+    Q --> W1 & W2
     W1 --> P1
     W2 --> P2
-    W3 --> P3
-    W4 --> P4
-    W5 -->|status events| A1
+    P2 --> WS
+    Workers --> WH
+    WH -->|status events| A1
     API --> PG
     WF --> PG
     Workers --> MG
-    WF -->|in-app| WS
     DASH --> API
 ```
-
-\* Twilio adapter is written and unit-tested with mocks only (see Section 9).
 
 ---
 
@@ -126,7 +122,7 @@ sequenceDiagram
             W->>DB: status = sent
         else Failure
             W->>Q: Retry with exponential backoff
-            Note over W,Q: After max attempts → Dead Letter Queue<br/>and optional fallback channel
+            Note over W,Q: After max attempts → Dead Letter Queue
         end
     end
 ```
@@ -139,10 +135,10 @@ sequenceDiagram
 |---|---|
 | **API Service** | REST API, API-key auth guard, DTO validation, idempotency, rate limiting per tenant, Swagger docs |
 | **Workflow Engine** | Resolves workflow steps (channel, delay, digest, fallback), applies subscriber preferences and quiet hours, renders templates |
-| **Channel Workers** | One BullMQ queue + worker per channel; isolated so a slow SMS provider never blocks email |
+| **Channel Workers** | One BullMQ queue + worker per channel; isolated so a slow email provider never delays in-app messages |
 | **Provider Adapters** | Strategy pattern; each provider implements one interface; the operator enables providers and their order in `.env` |
 | **WebSocket Gateway** | Pushes in-app notifications in real time; Redis adapter so it scales across instances |
-| **Webhook Dispatcher** | Sends signed (HMAC-SHA256) status events back to client apps, with its own retries |
+| **Webhook Dispatcher** (planned) | Sends signed (HMAC-SHA256) status events back to client apps, with its own retries |
 | **Dashboard** | Next.js app served by the operator's own installation: templates with live preview, API keys, workflows, logs explorer, stats |
 | **SDK + Inbox widget** | `@notifyhub/node` (typed client) and `@notifyhub/react` (`<Inbox />` bell component) |
 
@@ -158,7 +154,7 @@ notifyhub/
 │   └── dashboard/            # Next.js admin dashboard
 ├── packages/
 │   ├── core/                 # Shared domain types, DTOs, enums
-│   ├── providers/            # Provider interfaces + adapters (email, sms, push, chat)
+│   ├── providers/            # Provider interfaces + adapters (email, in-app)
 │   ├── templates/            # Handlebars/MJML rendering
 │   ├── sdk-node/             # @notifyhub/node
 │   └── inbox-react/          # @notifyhub/react <Inbox />
@@ -210,9 +206,6 @@ erDiagram
         uuid tenant_id FK
         string external_id "client app's user id"
         string email
-        string phone
-        string telegram_chat_id
-        jsonb push_tokens
         string timezone
     }
     WORKFLOW {
@@ -227,8 +220,8 @@ erDiagram
         uuid workflow_id FK
         int order
         string type "channel | delay | digest"
-        string channel "email | sms | push | in_app | chat | webhook"
-        jsonb config "delayMs, digestWindow, fallbackChannel"
+        string channel "email | in_app"
+        jsonb config "delayMs, digestWindow"
         uuid template_id FK
     }
     TEMPLATE {
@@ -290,8 +283,8 @@ export interface SendResult {
 }
 
 export interface ChannelProvider<TMessage> {
-  readonly id: string;          // 'gmail_smtp', 'textbee', 'fcm' ...
-  readonly channel: Channel;    // 'email' | 'sms' | 'push' | 'chat'
+  readonly id: string;          // 'smtp', 'brevo', 'inbox'
+  readonly channel: Channel;    // 'email' | 'in_app'
   send(message: TMessage): Promise<SendResult>;   // credentials are read from .env when the provider is created
 }
 ```
@@ -304,7 +297,6 @@ BREVO_API_KEY=...
 SMTP_HOST=smtp.gmail.com
 SMTP_USER=...
 SMTP_PASS=...
-TELEGRAM_BOT_TOKEN=...
 ```
 
 ```ts
@@ -330,9 +322,7 @@ export class ProviderRegistry {
 @Module({})
 export class ProvidersModule {
   static forRoot(options: { extraProviders?: Type<ChannelProvider<any>>[] } = {}): DynamicModule {
-    const builtIn = [GmailSmtpProvider, BrevoProvider, MailpitProvider, TextbeeSmsProvider,
-                     ConsoleSmsProvider, TwilioSmsProvider, FcmPushProvider, WebPushProvider,
-                     TelegramProvider, DiscordWebhookProvider, SlackWebhookProvider];
+    const builtIn = [SmtpEmailProvider, BrevoEmailProvider, InboxProvider];
     const all = [...builtIn, ...(options.extraProviders ?? [])];
     return {
       module: ProvidersModule,
@@ -354,7 +344,7 @@ export class ProvidersModule {
 }
 ```
 
-Adding a new provider = one class + one line. The core never changes. That is the story to tell in interviews.
+Adding a new **email** provider (e.g. Amazon SES, Mailgun) = one class + one line. The core never changes.
 
 ---
 
@@ -364,24 +354,22 @@ Adding a new provider = one class + one line. The core never changes. That is th
 flowchart TD
     T[Trigger] --> WQ[workflow queue]
     WQ --> E[email queue]
-    WQ --> S[sms queue]
-    WQ --> P[push queue]
-    WQ --> C[chat queue]
-    WQ --> I[in-app → WebSocket + Mongo]
+    WQ --> I[in-app queue → Mongo + WebSocket]
     WQ --> D[digest queue<br/>delayed jobs]
-    E & S & P & C -->|failed, retryable| R{attempts < 5?}
-    R -->|yes| BO[Exponential backoff<br/>2s, 4s, 8s, 16s, 32s]
+    E -->|provider failed| FO{Another email<br/>provider configured?}
+    FO -->|yes| E2[Try next provider]
+    FO -->|no| R{attempts < 5?}
+    I -->|failed, retryable| R
+    R -->|yes| BO[Exponential backoff<br/>2s, 4s, 8s, 16s]
     BO --> E
     R -->|no| DLQ[Dead Letter Queue]
-    DLQ --> FB{Fallback channel<br/>configured?}
-    FB -->|yes| S
-    FB -->|no| LOG[Mark failed + webhook event]
+    DLQ --> LOG[Mark failed + webhook event]
 ```
 
 Reliability checklist:
 
 - **Idempotency**: `SETNX idem:{tenantId}:{key}` in Redis with a 24h TTL, plus a unique index in Mongo as a second guard
-- **Retry only retryable errors**: providers return `retryable: false` for invalid emails/phone numbers
+- **Retry only retryable errors**: providers return `retryable: false` for invalid email addresses
 - **Per-channel queues** with separate concurrency settings
 - **Per-tenant rate limiting** with a Redis sliding window (`@nestjs/throttler` with Redis storage, or your own)
 - **Graceful shutdown**: workers finish in-flight jobs on `SIGTERM`
@@ -391,21 +379,17 @@ Reliability checklist:
 
 ---
 
-## 9. Channel and provider choices (Pakistan-friendly, $0)
+## 9. Channels and providers ($0)
 
-### SMS — about Twilio
+NotifyHub supports exactly two channels:
 
-Twilio's free trial is **not available for Pakistan sign-ups** (Pakistan is not on the trial's supported-country list). Even where the trial works, it only sends to up to 5 verified numbers, only within the sign-up country, and only using Twilio's pre-defined templates (no custom message bodies). So it is not useful for this project.
-
-**What to do instead:**
-
-| Option | Cost | Use it for |
+| Channel | How it is delivered | Cost |
 |---|---|---|
-| **ConsoleSmsProvider** (your own fake provider that logs to console / saves to Mongo) | Free | Default for development and CI |
-| **textbee.dev** (open-source; turns your Android phone into an SMS gateway via REST API) | Free tier: 300 SMS/month. Messages go out from your own SIM, so your normal mobile SMS bundle applies | Real SMS demo to your own number |
-| **TwilioSmsProvider** (write the adapter, unit-test it with mocked HTTP) | Free (no account needed) | Proves the system is pluggable for a "real" provider |
+| **Email** | Through the operator's email providers (below), with failover | Free options available |
+| **In-app** | Built in: stored in MongoDB, pushed live over Socket.IO to the operator's app | Free, no third party |
 
-Fun fact: textbee itself is built with NestJS + Next.js + MongoDB, so its source code is worth reading.
+SMS, push notifications, chat apps (Telegram, Discord, Slack, WhatsApp) and other channels are
+**out of scope**: they are not planned and won't be added.
 
 ### Email — SMTP is perfect
 
@@ -415,17 +399,6 @@ Fun fact: textbee itself is built with NestJS + Next.js + MongoDB, so its source
 | **Gmail SMTP** with an App Password | Free | Enable 2-Step Verification → create App Password. Fine for demos (Gmail has a daily sending cap of roughly a few hundred) |
 | **Brevo** | Free forever: 300 emails/day, SMTP + REST API | Good second "real" provider; shows multi-provider support |
 | **Resend** | Free: 3,000/month, 100/day | Needs a verified domain to send to others, and a domain costs money, so it is optional |
-
-### Other channels (all free)
-
-| Channel | Provider | Notes |
-|---|---|---|
-| Push (Android + Web) | **Firebase Cloud Messaging** | Free. iOS push needs a paid Apple Developer account, so skip iOS |
-| Browser push | **Web Push** with VAPID keys (`web-push` npm) | Free, no third party at all |
-| Chat | **Telegram Bot API** | Free, works in Pakistan, create bot via @BotFather. Excellent "SMS replacement" for demos |
-| Chat | **Discord webhooks**, **Slack incoming webhooks** | Free |
-| In-app | Your own Socket.IO gateway | Free |
-| Webhook | Your own dispatcher | Free; test with a local receiver or webhook.site |
 
 ---
 
@@ -490,15 +463,7 @@ volumes:
 | SDK publishing | npm (free for public packages) |
 | API docs | `@nestjs/swagger` |
 
-Free-tier limits of third-party providers (Brevo, textbee, ...) change over time, so check each provider's current page before you rely on it.
-
-### Things that cost money (and how to avoid them)
-
-| Paid thing | Free workaround |
-|---|---|
-| Real SMS via Twilio/Vonage | Console provider + textbee + mocked Twilio adapter |
-| iOS push (Apple Developer Program) | FCM for Android + Web Push |
-| WhatsApp Business API | Telegram bot instead |
+Free-tier limits of third-party providers (Brevo, Gmail, ...) change over time, so check each provider's current page before you rely on it.
 
 ---
 
@@ -525,21 +490,17 @@ Free-tier limits of third-party providers (Brevo, textbee, ...) change over time
 ### Phase 3 — Channels and provider system (Weeks 5–6)
 - [ ] `ChannelProvider` interface + `ProviderRegistry` + dynamic module
 - [ ] Email: Mailpit, Gmail SMTP, Brevo
-- [ ] SMS: Console, textbee, Twilio (mock-tested)
-- [ ] Chat: Telegram, Discord
 - [ ] Provider selection and order via `.env` (e.g. `EMAIL_PROVIDERS=brevo,smtp`)
 - [ ] Provider priority + failover (Brevo down → Gmail SMTP)
-- [ ] Channel fallback in workflows (push failed → Telegram)
 
 ### Phase 4 — In-app and real-time (Week 7)
 - [x] Socket.IO gateway with Redis adapter, subscriber auth via short-lived subscriber tokens
 - [x] Inbox API: list, unread count, mark read / mark all read
 - [ ] `@notifyhub/react` `<Inbox />` component
-- [ ] Web Push (VAPID) + FCM
 
 ### Phase 5 — Smart features (Weeks 8–9)
 - [ ] Workflow steps: channel, delay, digest
-- [ ] Subscriber preferences per category and channel
+- [ ] Subscriber preferences per category and channel (email / in-app)
 - [ ] Quiet hours by timezone
 - [ ] Per-tenant rate limiting
 - [ ] Outbound webhooks with HMAC signatures and retries
@@ -575,4 +536,4 @@ Free-tier limits of third-party providers (Brevo, textbee, ...) change over time
 - Self-hosting in one command: clone, fill in `.env`, run
 - Clean provider extension story: "add a provider in one class"
 
-Start with Phases 1–3 and make them solid. A reliable email + Telegram + in-app system with good retries and logs is already a top-tier portfolio project.
+Start with Phases 1–3 and make them solid. A reliable email + in-app system with good retries and logs is already a top-tier portfolio project.

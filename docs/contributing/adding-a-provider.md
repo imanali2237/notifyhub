@@ -1,12 +1,16 @@
-# Adding a provider or a channel
+# Adding an email provider
 
-NotifyHub is built so that new **providers** (another email service) and new
-**channels** (SMS, Telegram...) plug in without touching the core: the trigger
-API, queues, retries, failover and status tracking work for anything that
-follows the contracts below.
+NotifyHub delivers two channels, **email** and **in-app**, and supports only
+these two. New channels (SMS, push, chat apps…) are out of scope, so please
+don't open pull requests adding them.
 
-- **Provider** = one service that delivers one channel (Brevo for email, Twilio for SMS).
-- **Channel** = a kind of message (email, SMS, chat), with its own queue and request fields.
+What you *can* add is another **email provider** (Amazon SES, Mailgun,
+Postmark…). It plugs in without touching the core: the trigger API, queues,
+retries, failover and status tracking work for anything that follows the
+contract below.
+
+- **Provider** = one service that delivers a channel (SMTP or Brevo for email; the built-in inbox for in-app).
+- **Channel** = a kind of message (`email` or `in_app`), with its own queue and request fields.
 
 ## How a provider fits in
 
@@ -136,14 +140,6 @@ the request sent, success, and one case per failure kind. See
 Operators can then use `EMAIL_PROVIDERS=ses` or `EMAIL_PROVIDERS=ses,smtp`.
 Nothing else changes: worker, queues, retries, failover and the API already
 work with it.
-
-## Adding a channel (example: SMS)
-
-Follow the checklist in [`src/channels/README.md`](../../src/channels/README.md):
-channel name and queue, handler (recipient field, template fields, content
-rules), request DTO, providers (with an `SMS_PROVIDERS` list built the same way
-as `EMAIL_PROVIDERS`), and a worker processor. Then add a `docs/sms.md` page
-and update [the docs index](../README.md).
 
 ## Before opening a pull request
 

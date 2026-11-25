@@ -104,8 +104,8 @@ How your users see these messages (tokens, inbox API, WebSocket):
 
 ## Send on several channels — `POST /v1/events/trigger`
 
-One request, one notification **per channel**. Channels today: `email` and
-`in_app`; SMS, Telegram and others will be added under `channels` the same way.
+One request, one notification **per channel**. The two channels are `email`
+and `in_app` (NotifyHub supports only these two).
 
 ```json
 {

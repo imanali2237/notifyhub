@@ -8,14 +8,13 @@ export type ChannelContent = Record<string, string | undefined>;
 /**
  * How a template field is rendered:
  *  - 'html'  → values are HTML-escaped (a payload can't inject markup)
- *  - 'plain' → no escaping (subjects, SMS text, push titles...)
+ *  - 'plain' → no escaping (email subjects and text, in-app messages)
  */
 export type TemplateFieldMode = 'html' | 'plain';
 
 /**
  * Recipient fields a channel can deliver to: to.email, or to.subscriberId for
  * the in-app inbox (the user is identified by your app's id).
- * A phone channel (SMS) would add `phone` to Recipient and here.
  */
 export type RecipientAddressField = keyof Pick<
   Recipient,
@@ -32,7 +31,7 @@ export interface NotificationContext {
 /**
  * Everything the generic core needs to know about one channel.
  * The trigger API, the renderer and the worker only talk to this interface —
- * never to "email" or "sms" directly.
+ * never to "email" or "in_app" directly.
  */
 export interface ChannelHandler<TMessage = unknown> {
   readonly channel: Channel;

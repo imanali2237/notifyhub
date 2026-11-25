@@ -19,7 +19,7 @@ your own server; your apps send notifications through its API.
 | [Configuration reference](configuration.md) | Look up **every** `.env` setting, its default and what it does |
 | [Queues and workers](queues-and-workers.md) | Understand retries, the queue dashboard, concurrency and scaling |
 | [Scaling](scaling.md) | Handle more traffic: tuning, more workers, more API instances, load balancer, capacity planning, measured performance |
-| [Adding a provider or channel](contributing/adding-a-provider.md) | Contribute a new provider (e.g. SES) or channel (e.g. SMS) |
+| [Adding an email provider](contributing/adding-a-provider.md) | Contribute a new email provider (e.g. Amazon SES) |
 | [Architecture](architecture.md) | The full design and roadmap |
 
 ## What works today
@@ -36,7 +36,8 @@ your own server; your apps send notifications through its API.
 | Tools | Swagger docs (`/docs`), queue dashboard (`/queues`), Mailpit (`:8025`) |
 | Quality | ✅ CI on every pull request: lint, formatting, typecheck, unit + e2e tests, production Docker stack ([`.github/workflows/ci.yml`](../.github/workflows/ci.yml)) |
 | Deployment | ✅ Production Docker image + compose file, automatic migrations, optional HTTPS (Caddy), backups |
-| SMS, Telegram, push, `<Inbox />` React component, SDK, dashboard | Planned |
+| `<Inbox />` React component, SDK, dashboard | Planned |
+| SMS, push, chat apps (Telegram, Slack…) | Not supported: NotifyHub is email + in-app only |
 
 ## Keeping these docs up to date
 
@@ -47,6 +48,5 @@ pull request:**
 - new or changed `.env` setting → [configuration.md](configuration.md) (and `.env.example`)
 - new provider → [email-providers.md](email-providers.md) (or the channel's page)
 - new or changed endpoint → [sending-notifications.md](sending-notifications.md)
-- new channel → a new `docs/<channel>.md` page, linked from this index
 - anything moving from "planned" to "works" → the table above
 - security-relevant change (auth, tokens, what's stored, defaults) → [SECURITY.md](../SECURITY.md)'s list of built-in measures
