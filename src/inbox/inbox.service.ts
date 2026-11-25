@@ -32,7 +32,7 @@ export class InboxService {
       .findOneAndUpdate(
         { notificationId },
         { $setOnInsert: { notificationId, ...fields, readAt: null } },
-        { upsert: true, new: true },
+        { upsert: true, returnDocument: 'after' },
       )
       .lean();
     return toInboxMessageView(doc);
