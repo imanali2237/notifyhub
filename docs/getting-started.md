@@ -167,3 +167,4 @@ your API key under `api-key`, and try the endpoints from the browser.
 | `npm run db:studio` | Browse the PostgreSQL data in a web UI |
 | `npm test` / `npm run test:e2e` | Unit tests / end-to-end tests (e2e needs the Docker services running) |
 | `npm run lint` / `npm run format` | Lint / format the code |
+| `npm run typecheck` / `npm run format:check` | Type-check / check formatting without changing files (both run in CI) |

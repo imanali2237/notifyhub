@@ -5,6 +5,7 @@
 > NotifyHub handles providers, templates, queuing, retries, failover and
 > delivery logs.
 
+[![CI](https://github.com/imanali2237/notifyhub-backend/actions/workflows/ci.yml/badge.svg)](https://github.com/imanali2237/notifyhub-backend/actions/workflows/ci.yml)
 ![Status](https://img.shields.io/badge/status-in%20development-orange)
 ![NestJS](https://img.shields.io/badge/NestJS-E0234E?logo=nestjs&logoColor=white)
 ![Prisma](https://img.shields.io/badge/Prisma-2D3748?logo=prisma&logoColor=white)
@@ -144,6 +145,7 @@ and requests are still accepted while workers are down.
 ## Repository structure
 
 ```
+├── .github/workflows/ci.yml    # CI: lint, typecheck, tests, e2e, production Docker stack
 ├── Dockerfile                  # Production image (API + worker + migrations)
 ├── docker/docker-compose.yml   # Development: PostgreSQL, MongoDB, Redis, Mailpit
 ├── docker/docker-compose.prod.yml  # Production: full stack, optional HTTPS (Caddy)
@@ -189,7 +191,7 @@ and requests are still accepted while workers are down.
 - [ ] **In-app and real-time:** ~~Socket.IO gateway~~ ✅, ~~inbox API~~ ✅, `<Inbox />` component, Web Push + FCM
 - [ ] **Smart features:** subscribers, workflows, delays, digests, preferences, quiet hours, rate limiting, outbound webhooks
 - [ ] **Dashboard and SDK:** Next.js dashboard, template editor, logs explorer, `@notifyhub/node` on npm, demo app
-- [ ] **Production polish:** ~~production Docker Compose + self-hosting guide~~ ✅, ~~load tests~~ ✅, OpenTelemetry, metrics, structured logging, CI
+- [ ] **Production polish:** ~~production Docker Compose + self-hosting guide~~ ✅, ~~load tests~~ ✅, ~~CI~~ ✅, OpenTelemetry, metrics, structured logging, rate limiting
 
 ---
 
@@ -197,11 +199,19 @@ and requests are still accepted while workers are down.
 
 1. Fork the repo and create a branch: `git checkout -b feat/my-feature`
 2. Commit using [Conventional Commits](https://www.conventionalcommits.org/): `feat(providers): add SES email provider`
-3. Make sure `npm run lint`, `npm test` and `npm run test:e2e` pass
+3. Make sure these pass (CI runs the same checks on every pull request):
+   `npm run lint`, `npm run format:check`, `npm run typecheck`, `npm test`, `npm run test:e2e`
 4. **Update the docs** for anything that changes setup, configuration or the API (see [docs/README.md](docs/README.md#keeping-these-docs-up-to-date))
 5. Open a pull request
 
 Adding a provider or channel? Start with [the contributor guide](docs/contributing/adding-a-provider.md).
+
+---
+
+## Security
+
+Found a vulnerability? Please **don't open a public issue**: report it privately
+as described in [SECURITY.md](SECURITY.md).
 
 ---
 

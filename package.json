@@ -31,7 +31,9 @@
     "db:studio": "prisma studio",
     "start:worker": "node dist/worker",
     "start:worker:dev": "nest start --watch --entryFile worker",
-    "dev": "npm run infra:up && prisma migrate deploy && nest build && concurrently --names build,api,worker --prefix-colors gray,blue,magenta --kill-others-on-fail \"tsc -p tsconfig.build.json --watch --preserveWatchOutput\" \"node --enable-source-maps --watch dist/main.js\" \"node --enable-source-maps --watch dist/worker.js\""
+    "dev": "npm run infra:up && prisma migrate deploy && nest build && concurrently --names build,api,worker --prefix-colors gray,blue,magenta --kill-others-on-fail \"tsc -p tsconfig.build.json --watch --preserveWatchOutput\" \"node --enable-source-maps --watch dist/main.js\" \"node --enable-source-maps --watch dist/worker.js\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
+    "typecheck": "tsc --noEmit -p tsconfig.json --incremental false"
   },
   "dependencies": {
     "@bull-board/api": "9.10.5",

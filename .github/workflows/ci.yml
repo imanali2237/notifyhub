@@ -1,0 +1,143 @@
+# Runs on every pull request and every push to main.
+# Three jobs run in parallel; a PR should only be merged when all are green.
+#
+#   checks   lint, formatting, typecheck, unit tests, build
+#   e2e      end-to-end tests against real PostgreSQL, MongoDB and Redis
+#   docker   builds the production image and starts the full production
+#            stack (docker/docker-compose.prod.yml), then checks /health
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch: # allows a manual run from the Actions tab
+
+# A new push to the same PR cancels the run that is still going.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege: the workflow only needs to read the code.
+permissions:
+  contents: read
+
+env:
+  # `npm ci` runs `prisma generate`, which needs a DATABASE_URL to be set
+  # (it doesn't connect). Overridden with a real one in the e2e job.
+  DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+
+jobs:
+  checks:
+    name: Lint, typecheck, unit tests, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  e2e:
+    name: End-to-end tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: notifyhub
+          POSTGRES_PASSWORD: notifyhub
+          POSTGRES_DB: notifyhub
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U notifyhub -d notifyhub"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+      mongo:
+        image: mongo:7
+        env:
+          MONGO_INITDB_ROOT_USERNAME: notifyhub
+          MONGO_INITDB_ROOT_PASSWORD: notifyhub
+        ports: ["27017:27017"]
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ ping: 1 }).ok'"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      DATABASE_URL: postgresql://notifyhub:notifyhub@localhost:5432/notifyhub
+      MONGO_URI: mongodb://notifyhub:notifyhub@localhost:27017/notifyhub?authSource=admin
+      REDIS_HOST: localhost
+      REDIS_PORT: "6379"
+      # Test-only values, not real secrets.
+      OTP_SECRET: ci-only-otp-secret-not-used-anywhere-else-0000
+      JWT_SECRET: ci-only-jwt-secret-not-used-anywhere-else-0000
+      EMAIL_PROVIDERS: "" # email channel off: no mail server in CI
+      EMAIL_VERIFICATION_REQUIRED: "false"
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      - run: npx prisma migrate deploy
+      - run: npm run test:e2e
+
+  docker:
+    name: Production Docker stack
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Create a throwaway .env.production
+        run: |
+          cp .env.production.example .env.production
+          for key in POSTGRES_PASSWORD MONGO_PASSWORD REDIS_PASSWORD OTP_SECRET JWT_SECRET; do
+            sed -i "s/^${key}=.*/${key}=$(openssl rand -hex 24)/" .env.production
+          done
+
+      - name: Validate the compose file
+        run: docker compose -f docker/docker-compose.prod.yml --env-file .env.production config --quiet
+
+      - name: Build and start the stack
+        run: docker compose -f docker/docker-compose.prod.yml --env-file .env.production up -d --build
+
+      - name: Wait for /health
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:3000/health; then echo; exit 0; fi
+            sleep 3
+          done
+          echo "API did not become healthy in time"
+          exit 1
+
+      - name: Check the worker is running and migrations succeeded
+        run: |
+          docker compose -f docker/docker-compose.prod.yml --env-file .env.production ps -a
+          test "$(docker inspect -f '{{.State.Running}}' notifyhub-prod-worker-1)" = "true"
+          test "$(docker inspect -f '{{.State.ExitCode}}' notifyhub-prod-migrate-1)" = "0"
+
+      - name: Logs (on failure)
+        if: failure()
+        run: docker compose -f docker/docker-compose.prod.yml --env-file .env.production logs --no-color --tail 200
+
+      - name: Clean up
+        if: always()
+        run: docker compose -f docker/docker-compose.prod.yml --env-file .env.production down -v

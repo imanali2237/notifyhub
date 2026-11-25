@@ -148,6 +148,6 @@ and update [the docs index](../README.md).
 ## Before opening a pull request
 
 ```bash
-npm run lint && npm test && npm run test:e2e   # e2e needs `npm run infra:up`
-npx prettier --check src test
+npm run lint && npm run format:check && npm run typecheck && npm test && npm run test:e2e   # e2e needs `npm run infra:up`
+# CI runs the same checks on your pull request
 ```
