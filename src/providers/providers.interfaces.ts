@@ -16,13 +16,13 @@ export type SendResult =
   | { success: false; failure: SendFailureKind; error: string };
 
 /**
- * The plug-and-play contract (architecture doc §7). Every provider — SMTP, Brevo,
- * Twilio, Telegram... — is one class implementing this. The worker never knows
+ * The plug-and-play contract (architecture doc §7). Every provider (SMTP, Brevo,
+ * the in-app inbox) is one class implementing this. The worker never knows
  * which concrete provider it's using. Credentials come from .env when the
  * provider is created. send() should not throw: report failures in the result.
  */
 export interface ChannelProvider<TMessage = unknown> {
-  /** Unique id, e.g. 'smtp', 'brevo', 'textbee'. Stored on each notification. */
+  /** Unique id, e.g. 'smtp', 'brevo', 'inbox'. Stored on each notification. */
   readonly id: string;
   readonly channel: Channel;
   send(message: TMessage): Promise<SendResult>;

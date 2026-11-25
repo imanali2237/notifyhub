@@ -47,7 +47,7 @@ curl -X POST http://localhost:3000/v1/in-app/send \
 
 | Field | Required | Rules |
 |---|---|---|
-| `to.subscriberId` | yes | **Your** app's id for the user. The inbox is identified by it, no email or phone needed |
+| `to.subscriberId` | yes | **Your** app's id for the user. The inbox is identified by it, no email address needed |
 | `body` | yes | 1–5,000 characters |
 | `title` | no | Up to 200 characters |
 | `actionUrl` | no | Where a click leads: a path in your app (`/orders/{{orderId}}`) or a full `http(s)://` URL. The start must be written literally, not as a placeholder, so a payload can never turn it into a `javascript:` link |

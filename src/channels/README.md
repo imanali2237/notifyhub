@@ -1,62 +1,30 @@
 # Channels
 
+NotifyHub supports exactly two channels, and only these two:
+
+| Channel  | Handler                    | Recipient field   | Template fields                                          | Delivered by                                  |
+| -------- | -------------------------- | ----------------- | -------------------------------------------------------- | --------------------------------------------- |
+| `email`  | `email/email.channel.ts`   | `to.email`        | `subject` (plain), `html` (HTML-escaped), `text` (plain) | `EMAIL_PROVIDERS` (SMTP, Brevo) with failover |
+| `in_app` | `in-app/in-app.channel.ts` | `to.subscriberId` | `title`, `body`, `actionUrl` (all plain)                 | `InboxProvider`: MongoDB + Socket.IO          |
+
+SMS, push, chat apps and other channels are out of scope.
+
+## How a channel is wired
+
 The core (trigger API, queues, worker lifecycle, renderer, provider registry) is
-channel-agnostic. A channel is described once by a `ChannelHandler`, and
-everything else is driven by it.
+driven by one `ChannelHandler` per channel (`channels.interfaces.ts`), registered
+in `channel-handlers.ts`. A handler says:
 
-## Adding a new channel (example: SMS)
+- which recipient field it needs (`recipientField`)
+- which template fields it renders, and how they are escaped (`templateFields`)
+- what content is required (`validateContent`)
+- how to turn the rendered content into the provider's message (`buildMessage`)
 
-1. **Name + queue** — `channels/channels.constants.ts`
+Each channel also has its own BullMQ queue and concurrency setting
+(`channels.constants.ts`), request DTO (`events/dto/channels/`) and worker
+processor (`worker/processors/`).
 
-   ```ts
-   export const CHANNELS = ['email', 'in_app', 'sms'] as const;
-   CHANNEL_QUEUES.sms = 'notifications.sms';
-   CHANNEL_CONCURRENCY_SETTING.sms = 'SMS_WORKER_CONCURRENCY'; // + env.ts + defaults
-   ```
-
-   For a phone channel, also add `phone` to `Recipient`, `RecipientDto`, the
-   notification schema and `RecipientAddressField`.
-
-   TypeScript now fails to compile until steps 2–5 are done (`Record<Channel, …>`).
-
-2. **Handler** — `channels/sms/sms.channel.ts` (+ `sms.interfaces.ts` for `SmsMessage`)
-
-   ```ts
-   export const smsChannel: ChannelHandler<SmsMessage> = {
-     channel: 'sms',
-     recipientField: 'phone',
-     templateFields: { text: 'plain' },
-     validateContent: (c) => (c.text ? null : 'channels.sms needs text'),
-     // 3rd argument (notificationId, tenantId, environment) if the message needs it
-     buildMessage: (to, r) => ({ to, text: r.text ?? '' }),
-   };
-   ```
-
-   Register it in `channels/channel-handlers.ts`.
-
-3. **Request body** — `events/dto/channels/sms-content.dto.ts`, then add the
-   `sms?: SmsContentDto` field to `ChannelsContentDto`.
-
-4. **Provider(s)** — `providers/sms/console-sms.provider.ts` implementing
-   `ChannelProvider<SmsMessage>` with `channel = 'sms'`. Then:
-   - add an `SMS_PROVIDERS` list to `config/env.ts` (like `EMAIL_PROVIDERS`)
-     plus each provider's required settings
-   - add the providers to `providers/providers.catalog.ts`
-     (`buildEnabledProviders` reads `SMS_PROVIDERS`)
-
-5. **Processor** — `worker/processors/sms.processor.ts`
-   ```ts
-   @Processor(CHANNEL_QUEUES.sms, { concurrency: CHANNEL_CONCURRENCY.sms })
-   export class SmsProcessor extends ChannelProcessor {
-     protected readonly channel = 'sms' as const;
-   }
-   ```
-   Add it to `PROCESSORS` in `worker/worker.module.ts`.
-
-No changes needed in: `EventsService`, `NotificationsService`, the Notification
-schema, `NotificationQueueService`, `ChannelProcessor`, or the template renderer.
-
-## Adding a provider to an existing channel
+## Adding an email provider
 
 See [docs/contributing/adding-a-provider.md](../../docs/contributing/adding-a-provider.md)
 (contract, failure kinds, step-by-step example, tests, docs to update).

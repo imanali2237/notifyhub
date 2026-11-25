@@ -14,7 +14,7 @@ import type {
 } from '../notifications.interfaces.js';
 
 /**
- * One document per message per channel: a trigger with email + sms creates two,
+ * One document per message per channel: a trigger with email + in_app creates two,
  * sharing the same transactionId. Written by the API, updated by the worker.
  *
  * Every @Prop has an explicit `type`: don't rely on TypeScript metadata, which
@@ -75,7 +75,7 @@ export class Notification {
   @Prop({ type: String })
   lastError?: string;
 
-  /** Which provider sent it, e.g. 'smtp', 'brevo', 'textbee'. */
+  /** Which provider sent it, 'smtp', 'brevo' or 'inbox'. */
   @Prop({ type: String })
   provider?: string;
 
@@ -102,7 +102,7 @@ export const NotificationSchema = SchemaFactory.createForClass(Notification);
 
 // Dashboard: "latest notifications of my tenant"
 NotificationSchema.index({ tenantId: 1, createdAt: -1 });
-// Dashboard filters: "failed SMS of subscriber X"
+// Dashboard filters: "failed emails of subscriber X"
 NotificationSchema.index({
   tenantId: 1,
   'recipient.subscriberId': 1,

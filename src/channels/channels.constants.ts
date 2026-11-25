@@ -1,14 +1,13 @@
 /**
- * Every channel NotifyHub supports. Adding one (e.g. 'sms') here is step 1 of
- * the checklist in channels/README.md — TypeScript then points at every place
- * that still needs a handler, queue, provider and processor.
+ * The channels NotifyHub supports: email and the in-app inbox, and only these
+ * two (see channels/README.md).
  */
 export const CHANNELS = ['email', 'in_app'] as const;
 
 export type Channel = (typeof CHANNELS)[number];
 
 /**
- * One BullMQ queue per channel, so a slow SMS provider never blocks email,
+ * One BullMQ queue per channel, so a slow email provider never delays in-app messages,
  * and each channel can get its own concurrency and retry settings.
  */
 export const CHANNEL_QUEUES: Record<Channel, string> = {

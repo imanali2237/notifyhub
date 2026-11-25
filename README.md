@@ -60,9 +60,11 @@ curl -X POST http://localhost:3000/v1/email/send \
 - **Accounts and API keys** — the first account is the admin; API keys are shown once and stored hashed
 - **Everything configurable via `.env`**, validated at startup
 - **Built-in tools** — Swagger API docs, queue dashboard (Bull Board), Mailpit test inbox
-- **Plug-and-play design** — a new provider is one class + one line
+- **Plug-and-play email providers** — a new email service (e.g. SES) is one class + one line
 
-**Planned** (see the [roadmap](docs/architecture.md#11-roadmap)): SMS, Telegram / Discord / Slack, push, `<Inbox />` React component, subscribers and preferences, workflows, outbound webhooks, dashboard, `@notifyhub/node` SDK.
+**Channels:** NotifyHub focuses on **email** and **in-app** only. SMS, push and chat apps are out of scope.
+
+**Planned** (see the [roadmap](docs/architecture.md#11-roadmap)): `<Inbox />` React component, subscribers and preferences, workflows, outbound webhooks, dashboard, `@notifyhub/node` SDK.
 
 ---
 
@@ -158,7 +160,7 @@ and requests are still accepted while workers are down.
 │   ├── events/                 # Sending endpoints: /v1/events/trigger, /v1/email/send, /v1/in-app/send
 │   ├── inbox/                  # In-app inbox: storage, subscriber tokens, inbox API, WebSocket
 │   ├── notifications/          # Notification storage + GET /v1/notifications/:id
-│   ├── channels/               # Channel definitions (email, in_app; SMS etc. later)
+│   ├── channels/               # Channel definitions: email and in_app
 │   ├── providers/              # Provider contract, registry with failover, SMTP, Brevo, inbox
 │   ├── queues/                 # BullMQ setup + queue dashboard
 │   ├── worker/                 # Job processors
@@ -187,8 +189,8 @@ and requests are still accepted while workers are down.
 
 - [x] **Foundation:** Docker Compose, accounts + API keys, Swagger
 - [x] **Async and reliable:** worker, BullMQ queues, retries + backoff, dead-letter queue, Bull Board, idempotency, status history
-- [ ] **Channels and providers:** ~~provider registry~~ ✅, ~~SMTP + Brevo with failover~~ ✅, Telegram, Discord, SMS (console, textbee)
-- [ ] **In-app and real-time:** ~~Socket.IO gateway~~ ✅, ~~inbox API~~ ✅, `<Inbox />` component, Web Push + FCM
+- [x] **Channels and providers:** provider registry, SMTP + Brevo with failover, in-app inbox (email and in-app are the only channels)
+- [ ] **In-app and real-time:** ~~Socket.IO gateway~~ ✅, ~~inbox API~~ ✅, `<Inbox />` React component
 - [ ] **Smart features:** subscribers, workflows, delays, digests, preferences, quiet hours, rate limiting, outbound webhooks
 - [ ] **Dashboard and SDK:** Next.js dashboard, template editor, logs explorer, `@notifyhub/node` on npm, demo app
 - [ ] **Production polish:** ~~production Docker Compose + self-hosting guide~~ ✅, ~~load tests~~ ✅, ~~CI~~ ✅, OpenTelemetry, metrics, structured logging, rate limiting
